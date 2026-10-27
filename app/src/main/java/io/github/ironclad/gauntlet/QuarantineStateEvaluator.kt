@@ -14,13 +14,29 @@ object QuarantineStateEvaluator {
         gauntletWindowMs: Long = QuarantineTimer.GAUNTLET_WINDOW_MS,
         graceDurationMs: Long = QuarantineTimer.GRACE_DURATION_MS
     ): QuarantineTimer.State {
-        if (currentState == QuarantineTimer.State.LOCKED) return QuarantineTimer.State.LOCKED
         val elapsed = currentWallTime - startWallTime
+        return evaluateStateByElapsed(
+            currentState = currentState,
+            elapsedMs = elapsed,
+            quarantineDurationMs = quarantineDurationMs,
+            gauntletWindowMs = gauntletWindowMs,
+            graceDurationMs = graceDurationMs
+        )
+    }
+
+    fun evaluateStateByElapsed(
+        currentState: QuarantineTimer.State,
+        elapsedMs: Long,
+        quarantineDurationMs: Long = QuarantineTimer.QUARANTINE_DURATION_MS,
+        gauntletWindowMs: Long = QuarantineTimer.GAUNTLET_WINDOW_MS,
+        graceDurationMs: Long = QuarantineTimer.GRACE_DURATION_MS
+    ): QuarantineTimer.State {
+        if (currentState == QuarantineTimer.State.LOCKED) return QuarantineTimer.State.LOCKED
 
         return when (currentState) {
             QuarantineTimer.State.QUARANTINE_COUNTDOWN -> {
-                if (elapsed >= quarantineDurationMs) {
-                    val windowElapsed = elapsed - quarantineDurationMs
+                if (elapsedMs >= quarantineDurationMs) {
+                    val windowElapsed = elapsedMs - quarantineDurationMs
                     if (windowElapsed >= gauntletWindowMs) {
                         QuarantineTimer.State.LOCKED
                     } else {
@@ -31,7 +47,7 @@ object QuarantineStateEvaluator {
                 }
             }
             QuarantineTimer.State.GAUNTLET_WINDOW -> {
-                val windowElapsed = elapsed - quarantineDurationMs
+                val windowElapsed = elapsedMs - quarantineDurationMs
                 if (windowElapsed >= gauntletWindowMs) {
                     QuarantineTimer.State.LOCKED
                 } else {
@@ -39,7 +55,7 @@ object QuarantineStateEvaluator {
                 }
             }
             QuarantineTimer.State.GRACE_UNLOCKED -> {
-                val graceElapsed = elapsed - (quarantineDurationMs + gauntletWindowMs)
+                val graceElapsed = elapsedMs - (quarantineDurationMs + gauntletWindowMs)
                 if (graceElapsed >= graceDurationMs) {
                     QuarantineTimer.State.LOCKED
                 } else {
@@ -55,7 +71,17 @@ object QuarantineStateEvaluator {
         currentWallTime: Long,
         quarantineDurationMs: Long = QuarantineTimer.QUARANTINE_DURATION_MS
     ): Long {
-        val remaining = quarantineDurationMs - (currentWallTime - startWallTime)
+        return calculateRemainingQuarantineByElapsed(
+            elapsedMs = currentWallTime - startWallTime,
+            quarantineDurationMs = quarantineDurationMs
+        )
+    }
+
+    fun calculateRemainingQuarantineByElapsed(
+        elapsedMs: Long,
+        quarantineDurationMs: Long = QuarantineTimer.QUARANTINE_DURATION_MS
+    ): Long {
+        val remaining = quarantineDurationMs - elapsedMs
         return remaining.coerceAtLeast(0L)
     }
 
@@ -65,8 +91,19 @@ object QuarantineStateEvaluator {
         quarantineDurationMs: Long = QuarantineTimer.QUARANTINE_DURATION_MS,
         gauntletWindowMs: Long = QuarantineTimer.GAUNTLET_WINDOW_MS
     ): Long {
-        val elapsed = currentWallTime - startWallTime
-        val remaining = (quarantineDurationMs + gauntletWindowMs) - elapsed
+        return calculateRemainingGauntletByElapsed(
+            elapsedMs = currentWallTime - startWallTime,
+            quarantineDurationMs = quarantineDurationMs,
+            gauntletWindowMs = gauntletWindowMs
+        )
+    }
+
+    fun calculateRemainingGauntletByElapsed(
+        elapsedMs: Long,
+        quarantineDurationMs: Long = QuarantineTimer.QUARANTINE_DURATION_MS,
+        gauntletWindowMs: Long = QuarantineTimer.GAUNTLET_WINDOW_MS
+    ): Long {
+        val remaining = (quarantineDurationMs + gauntletWindowMs) - elapsedMs
         return remaining.coerceAtLeast(0L)
     }
 }

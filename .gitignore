@@ -1,11 +1,18 @@
 *.iml
-.gradle
+.gradle/
 /local.properties
 /.idea/
 .DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-*.apk
+*/.DS_Store
+/build/
+/captures/
+.externalNativeBuild/
+.cxx/
 app/build/
+.android_avd/
+avd/
+.kotlin/
+
+# Ignore build artifacts, but include official release directory
+*.apk
+!release/*.apk

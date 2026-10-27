@@ -1,0 +1,9 @@
+Initial release of Ironclad:
+- 1.2M domain local DNS sinkhole
+- Anti-bypass DoH (port 443) and DoT (port 853) dropping
+- SafeSearch DNS enforcement for Google, Bing, DuckDuckGo, and YouTube
+- Dual-stack IPv4 and IPv6 leak prevention
+- 24-hour monotonic hardware quarantine timer
+- 120-character zero-backspace typing gauntlet
+- Tier 1 Quick Shield (VPN + Accessibility Guardian)
+- Tier 2 Iron Fortress (Enterprise Device Owner lockdown)

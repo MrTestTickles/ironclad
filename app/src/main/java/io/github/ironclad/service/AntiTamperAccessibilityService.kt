@@ -11,13 +11,14 @@ import io.github.ironclad.gauntlet.QuarantineTimer
 
 /**
  * Tier 1 Anti-Tamper Shield (No ADB required).
- * Intercepts user attempts to open Settings, uninstall the app, or disconnect
- * the VPN while protection is locked, immediately ejecting back to the home launcher.
+ * Intercepts user attempts to open Settings, uninstall the app via Settings or Play Store,
+ * disconnect the VPN in Quick Settings, or tamper with device admin / accessibility while
+ * protection is locked, immediately ejecting back to the home launcher.
  */
 class AntiTamperAccessibilityService : AccessibilityService() {
 
     private lateinit var timer: QuarantineTimer
-    private var lastKickTime = 0L
+    private var lastToastTime = 0L
     private val mainHandler = Handler(Looper.getMainLooper())
 
     override fun onServiceConnected() {
@@ -32,21 +33,62 @@ class AntiTamperAccessibilityService : AccessibilityService() {
         if (timer.getState() == QuarantineTimer.State.GRACE_UNLOCKED) return
 
         val pkg = event.packageName?.toString() ?: return
+        val rootNode = rootInActiveWindow ?: return
 
-        // Intercept target Settings / Installer packages
+        // 1. Google Play Store evasion prevention (uninstalling Ironclad via Play Store)
+        if (pkg.contains("vending", ignoreCase = true)) {
+            if (isPlayStoreTampering(rootNode)) {
+                ejectToHome()
+            }
+            return
+        }
+
+        // 2. Notification Shade / Quick Settings VPN disconnect evasion
+        if (pkg.contains("systemui", ignoreCase = true)) {
+            if (isSystemUiVpnTampering(rootNode)) {
+                ejectToHome()
+            }
+            return
+        }
+
+        // 3. Settings, PackageInstaller, and Security Hub tampering
         if (pkg.contains("settings", ignoreCase = true) ||
             pkg.contains("packageinstaller", ignoreCase = true) ||
             pkg.contains("google.android.apps.safetyhub", ignoreCase = true)
         ) {
-            val rootNode = rootInActiveWindow ?: return
             if (isTamperingAttempt(rootNode)) {
                 ejectToHome()
             }
         }
     }
 
+    private fun isPlayStoreTampering(node: AccessibilityNodeInfo): Boolean {
+        val hasIronclad = node.findAccessibilityNodeInfosByText("Ironclad").isNotEmpty()
+        if (!hasIronclad) return false
+
+        val uninstallTriggers = listOf("Uninstall", "Installed", "Open", "Cancel")
+        for (trigger in uninstallTriggers) {
+            if (node.findAccessibilityNodeInfosByText(trigger).isNotEmpty()) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private fun isSystemUiVpnTampering(node: AccessibilityNodeInfo): Boolean {
+        val vpnTriggers = listOf("Disconnect", "Forget VPN", "Turn off", "Pause")
+        for (trigger in vpnTriggers) {
+            val matches = node.findAccessibilityNodeInfosByText(trigger)
+            if (matches.isNotEmpty()) {
+                val hasVpnOrIronclad = node.findAccessibilityNodeInfosByText("VPN").isNotEmpty() ||
+                        node.findAccessibilityNodeInfosByText("Ironclad").isNotEmpty()
+                if (hasVpnOrIronclad) return true
+            }
+        }
+        return false
+    }
+
     private fun isTamperingAttempt(node: AccessibilityNodeInfo): Boolean {
-        // Check for indicators of app management or network disconnection
         val triggers = listOf(
             "Ironclad",
             "Uninstall",
@@ -55,7 +97,16 @@ class AntiTamperAccessibilityService : AccessibilityService() {
             "Forget VPN",
             "Private DNS",
             "Turn off",
-            "Always-on VPN"
+            "Always-on VPN",
+            "Clear storage",
+            "Clear data",
+            "Delete data",
+            "Storage & cache",
+            "Deactivate",
+            "Disable",
+            "Special app access",
+            "Device admin apps",
+            "Device admin"
         )
 
         for (trigger in triggers) {
@@ -68,18 +119,20 @@ class AntiTamperAccessibilityService : AccessibilityService() {
     }
 
     private fun ejectToHome() {
-        val now = System.currentTimeMillis()
-        if (now - lastKickTime < 1500) return // Throttle toasts and actions
-        lastKickTime = now
-
+        // Always immediately eject to prevent race conditions
+        performGlobalAction(GLOBAL_ACTION_BACK)
         performGlobalAction(GLOBAL_ACTION_HOME)
 
-        mainHandler.post {
-            Toast.makeText(
-                applicationContext,
-                "🛡️ Ironclad Protection Active: Initiate 24h unlock in Ironclad to access settings.",
-                Toast.LENGTH_LONG
-            ).show()
+        val now = System.currentTimeMillis()
+        if (now - lastToastTime > 2000) {
+            lastToastTime = now
+            mainHandler.post {
+                Toast.makeText(
+                    applicationContext,
+                    "🛡️ Ironclad Protection Active: Initiate 24h unlock in Ironclad to access settings.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
         }
     }
 

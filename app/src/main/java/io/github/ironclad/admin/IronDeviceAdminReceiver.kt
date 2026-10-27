@@ -6,7 +6,6 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.UserManager
-import android.provider.Settings
 import android.widget.Toast
 
 class IronDeviceAdminReceiver : DeviceAdminReceiver() {
@@ -14,6 +13,7 @@ class IronDeviceAdminReceiver : DeviceAdminReceiver() {
     override fun onEnabled(context: Context, intent: Intent) {
         super.onEnabled(context, intent)
         Toast.makeText(context, "Ironclad Device Admin Enabled", Toast.LENGTH_SHORT).show()
+        enforceDefaultPolicies(context)
     }
 
     override fun onProfileProvisioningComplete(context: Context, intent: Intent) {
@@ -32,7 +32,7 @@ class IronDeviceAdminReceiver : DeviceAdminReceiver() {
         }
 
         /**
-         * Enforces foundational enterprise tamper restrictions.
+         * Enforces foundational enterprise anti-tamper & anti-bypass restrictions.
          */
         fun enforceDefaultPolicies(context: Context) {
             val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
@@ -49,8 +49,25 @@ class IronDeviceAdminReceiver : DeviceAdminReceiver() {
             // 3. Prevent creating guest or secondary profiles
             dpm.addUserRestriction(admin, UserManager.DISALLOW_ADD_USER)
 
-            // 4. Prevent factory resets without password
+            // 4. Prevent factory resets
             dpm.addUserRestriction(admin, UserManager.DISALLOW_FACTORY_RESET)
+
+            // 5. Prevent tampering with VPN configurations
+            dpm.addUserRestriction(admin, UserManager.DISALLOW_CONFIG_VPN)
+
+            // 6. Prevent tampering with Private DNS settings
+            dpm.addUserRestriction(admin, UserManager.DISALLOW_CONFIG_PRIVATE_DNS)
+
+            // 7. Prevent modifying system Date/Time to bypass quarantine countdown
+            dpm.addUserRestriction(admin, UserManager.DISALLOW_CONFIG_DATE_TIME)
+
+            // 8. Prevent USB debugging / ADB shell bypasses while locked
+            dpm.addUserRestriction(admin, UserManager.DISALLOW_DEBUGGING_FEATURES)
+
+            // 9. Lock Ironclad as Always-on VPN with system-level network lockdown killswitch
+            try {
+                dpm.setAlwaysOnVpnPackage(admin, context.packageName, /* lockdownEnabled= */ true)
+            } catch (ignored: Exception) {}
         }
 
         /**
@@ -62,32 +79,23 @@ class IronDeviceAdminReceiver : DeviceAdminReceiver() {
             if (!dpm.isDeviceOwnerApp(context.packageName)) return
 
             try {
-                // Set system-wide private DNS mode to strict hostname
-                // (Android Settings.Global constants for Private DNS)
                 dpm.setGlobalSetting(admin, "private_dns_mode", "hostname")
                 dpm.setGlobalSetting(admin, "private_dns_specifier", dnsHostname)
             } catch (ignored: Exception) {}
 
-            // Lock the Private DNS settings so user cannot toggle or change it
             dpm.addUserRestriction(admin, UserManager.DISALLOW_CONFIG_PRIVATE_DNS)
         }
 
         /**
          * Tier 2 Mode B: Enforce RethinkDNS as Always-On VPN with OS Killswitch.
-         * If RethinkDNS is turned off or killed, Android immediately cuts 100% of network traffic.
          */
         fun enforceRethinkCompanion(context: Context, rethinkPackage: String = "com.celzero.bravedns") {
             val dpm = context.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
             val admin = getComponentName(context)
             if (!dpm.isDeviceOwnerApp(context.packageName)) return
 
-            // 1. Protect RethinkDNS from being uninstalled
             dpm.setUninstallBlocked(admin, rethinkPackage, true)
-
-            // 2. Lock down the VPN with system killswitch (lockdownEnabled = true)
             dpm.setAlwaysOnVpnPackage(admin, rethinkPackage, true)
-
-            // 3. Prevent tampering with VPN settings in Android Settings
             dpm.addUserRestriction(admin, UserManager.DISALLOW_CONFIG_VPN)
         }
 
@@ -101,7 +109,13 @@ class IronDeviceAdminReceiver : DeviceAdminReceiver() {
 
             dpm.clearUserRestriction(admin, UserManager.DISALLOW_CONFIG_PRIVATE_DNS)
             dpm.clearUserRestriction(admin, UserManager.DISALLOW_CONFIG_VPN)
+            dpm.clearUserRestriction(admin, UserManager.DISALLOW_CONFIG_DATE_TIME)
+            dpm.clearUserRestriction(admin, UserManager.DISALLOW_DEBUGGING_FEATURES)
             dpm.setUninstallBlocked(admin, context.packageName, false)
+
+            try {
+                dpm.setAlwaysOnVpnPackage(admin, null, false)
+            } catch (ignored: Exception) {}
         }
     }
 }

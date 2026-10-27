@@ -17,6 +17,12 @@ class QuarantineStateEvaluatorTest {
             currentWallTime = 1000L + twentyFourHoursMs * 2
         )
         assertEquals(QuarantineTimer.State.LOCKED, state)
+
+        val stateElapsed = QuarantineStateEvaluator.evaluateStateByElapsed(
+            currentState = QuarantineTimer.State.LOCKED,
+            elapsedMs = twentyFourHoursMs * 2
+        )
+        assertEquals(QuarantineTimer.State.LOCKED, stateElapsed)
     }
 
     @Test
@@ -33,6 +39,10 @@ class QuarantineStateEvaluatorTest {
 
         val remaining = QuarantineStateEvaluator.calculateRemainingQuarantine(start, justBefore24h)
         assertEquals(1000L, remaining)
+
+        // Monotonic elapsed check
+        val remainingElapsed = QuarantineStateEvaluator.calculateRemainingQuarantineByElapsed(twentyFourHoursMs - 1000L)
+        assertEquals(1000L, remainingElapsed)
     }
 
     @Test
@@ -49,6 +59,13 @@ class QuarantineStateEvaluatorTest {
 
         val remainingGauntlet = QuarantineStateEvaluator.calculateRemainingGauntlet(start, exactly24h)
         assertEquals(fifteenMinutesMs, remainingGauntlet)
+
+        // Monotonic elapsed check
+        val stateByElapsed = QuarantineStateEvaluator.evaluateStateByElapsed(
+            currentState = QuarantineTimer.State.QUARANTINE_COUNTDOWN,
+            elapsedMs = twentyFourHoursMs
+        )
+        assertEquals(QuarantineTimer.State.GAUNTLET_WINDOW, stateByElapsed)
     }
 
     @Test
@@ -65,6 +82,13 @@ class QuarantineStateEvaluatorTest {
 
         val remaining = QuarantineStateEvaluator.calculateRemainingGauntlet(start, afterGauntletExpired)
         assertEquals(0L, remaining)
+
+        // Monotonic elapsed check
+        val stateByElapsed = QuarantineStateEvaluator.evaluateStateByElapsed(
+            currentState = QuarantineTimer.State.GAUNTLET_WINDOW,
+            elapsedMs = twentyFourHoursMs + fifteenMinutesMs + 1000L
+        )
+        assertEquals(QuarantineTimer.State.LOCKED, stateByElapsed)
     }
 
     @Test
@@ -86,5 +110,12 @@ class QuarantineStateEvaluatorTest {
             currentWallTime = pastGrace
         )
         assertEquals(QuarantineTimer.State.LOCKED, expiredState)
+
+        // Monotonic elapsed check
+        val expiredByElapsed = QuarantineStateEvaluator.evaluateStateByElapsed(
+            currentState = QuarantineTimer.State.GRACE_UNLOCKED,
+            elapsedMs = twentyFourHoursMs + fifteenMinutesMs + oneHourMs + 1000L
+        )
+        assertEquals(QuarantineTimer.State.LOCKED, expiredByElapsed)
     }
 }

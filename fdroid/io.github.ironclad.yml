@@ -1,0 +1,33 @@
+Categories:
+  - Security
+  - System
+License: GPL-3.0-only
+AuthorName: Ironclad Contributors
+SourceCode: https://github.com/MrTestTickles/ironclad
+IssueTracker: https://github.com/MrTestTickles/ironclad/issues
+
+AutoName: Ironclad
+Summary: Autonomous adult content blocker with 24-hour hardware quarantine
+
+Description: |-
+  Ironclad is an autonomous adult content blocker for Android built out of
+  frustration with blockers that allow easy bypasses. Traditional apps rely
+  on passwords you know or invasive partners that only report after a relapse.
+  Ironclad enforces true self accountability by eliminating all instant escape
+  routes through an unskippable 24 hour hardware lock.
+
+RepoType: git
+Repo: https://github.com/MrTestTickles/ironclad.git
+
+Builds:
+  - versionName: 1.0.0
+    versionCode: 1
+    commit: v1.0.0
+    subdir: app
+    gradle:
+      - yes
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: 1.0.0
+CurrentVersionCode: 1

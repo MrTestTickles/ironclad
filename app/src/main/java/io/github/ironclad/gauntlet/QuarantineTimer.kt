@@ -7,8 +7,8 @@ import androidx.security.crypto.MasterKey
 
 /**
  * Manages the tamper-resistant 24-hour quarantine countdown.
- * Utilizes encrypted preferences anchored to monotonic hardware uptime
- * to prevent evasion via system clock manipulation or airplane mode.
+ * Utilizes encrypted preferences anchored to monotonic hardware uptime (SystemClock.elapsedRealtime())
+ * across deep sleep and device reboots, completely eliminating evasion via system clock manipulation.
  */
 class QuarantineTimer(context: Context) {
 
@@ -37,7 +37,8 @@ class QuarantineTimer(context: Context) {
         const val GRACE_DURATION_MS = 60 * 60 * 1000L            // 1 Hour
 
         private const val KEY_START_WALL_TIME = "start_wall_time"
-        private const val KEY_START_ELAPSED = "start_elapsed"
+        private const val KEY_LAST_ELAPSED = "last_elapsed"
+        private const val KEY_ACCUMULATED_ELAPSED = "accumulated_elapsed"
         private const val KEY_STATE = "timer_state"
     }
 
@@ -47,9 +48,38 @@ class QuarantineTimer(context: Context) {
 
         prefs.edit()
             .putLong(KEY_START_WALL_TIME, nowWall)
-            .putLong(KEY_START_ELAPSED, nowElapsed)
+            .putLong(KEY_LAST_ELAPSED, nowElapsed)
+            .putLong(KEY_ACCUMULATED_ELAPSED, 0L)
             .putString(KEY_STATE, State.QUARANTINE_COUNTDOWN.name)
             .apply()
+    }
+
+    /**
+     * Updates and retrieves the true monotonic hardware elapsed milliseconds.
+     * Prevents clock manipulation: if user sets Android date forward,
+     * SystemClock.elapsedRealtime() does not jump, so accumulated time only tracks true physics.
+     * Across reboots, the delta is preserved and added upon subsequent measurement.
+     */
+    private fun updateAndGetAccumulatedElapsed(): Long {
+        val rawState = prefs.getString(KEY_STATE, State.LOCKED.name) ?: State.LOCKED.name
+        if (State.valueOf(rawState) == State.LOCKED) return 0L
+
+        val nowElapsed = SystemClock.elapsedRealtime()
+        val lastElapsed = prefs.getLong(KEY_LAST_ELAPSED, nowElapsed)
+        val delta = if (nowElapsed >= lastElapsed) {
+            nowElapsed - lastElapsed
+        } else {
+            // Device rebooted: add the current boot session's uptime
+            nowElapsed
+        }
+
+        val accumulated = prefs.getLong(KEY_ACCUMULATED_ELAPSED, 0L) + delta
+        prefs.edit()
+            .putLong(KEY_ACCUMULATED_ELAPSED, accumulated)
+            .putLong(KEY_LAST_ELAPSED, nowElapsed)
+            .apply()
+
+        return accumulated
     }
 
     fun getState(): State {
@@ -57,11 +87,10 @@ class QuarantineTimer(context: Context) {
         val storedState = State.valueOf(rawState)
         if (storedState == State.LOCKED) return State.LOCKED
 
-        val startWall = prefs.getLong(KEY_START_WALL_TIME, 0L)
-        val evaluatedState = QuarantineStateEvaluator.evaluateState(
+        val accumulated = updateAndGetAccumulatedElapsed()
+        val evaluatedState = QuarantineStateEvaluator.evaluateStateByElapsed(
             currentState = storedState,
-            startWallTime = startWall,
-            currentWallTime = System.currentTimeMillis(),
+            elapsedMs = accumulated,
             quarantineDurationMs = QUARANTINE_DURATION_MS,
             gauntletWindowMs = GAUNTLET_WINDOW_MS,
             graceDurationMs = GRACE_DURATION_MS
@@ -80,20 +109,18 @@ class QuarantineTimer(context: Context) {
 
     fun getRemainingQuarantineMillis(): Long {
         if (getState() != State.QUARANTINE_COUNTDOWN) return 0L
-        val startWall = prefs.getLong(KEY_START_WALL_TIME, 0L)
-        return QuarantineStateEvaluator.calculateRemainingQuarantine(
-            startWallTime = startWall,
-            currentWallTime = System.currentTimeMillis(),
+        val accumulated = updateAndGetAccumulatedElapsed()
+        return QuarantineStateEvaluator.calculateRemainingQuarantineByElapsed(
+            elapsedMs = accumulated,
             quarantineDurationMs = QUARANTINE_DURATION_MS
         )
     }
 
     fun getRemainingGauntletMillis(): Long {
         if (getState() != State.GAUNTLET_WINDOW) return 0L
-        val startWall = prefs.getLong(KEY_START_WALL_TIME, 0L)
-        return QuarantineStateEvaluator.calculateRemainingGauntlet(
-            startWallTime = startWall,
-            currentWallTime = System.currentTimeMillis(),
+        val accumulated = updateAndGetAccumulatedElapsed()
+        return QuarantineStateEvaluator.calculateRemainingGauntletByElapsed(
+            elapsedMs = accumulated,
             quarantineDurationMs = QUARANTINE_DURATION_MS,
             gauntletWindowMs = GAUNTLET_WINDOW_MS
         )
@@ -106,7 +133,8 @@ class QuarantineTimer(context: Context) {
     fun resetToLocked() {
         prefs.edit()
             .remove(KEY_START_WALL_TIME)
-            .remove(KEY_START_ELAPSED)
+            .remove(KEY_LAST_ELAPSED)
+            .remove(KEY_ACCUMULATED_ELAPSED)
             .putString(KEY_STATE, State.LOCKED.name)
             .apply()
     }
