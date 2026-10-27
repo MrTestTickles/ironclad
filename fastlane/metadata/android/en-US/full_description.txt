@@ -1,0 +1,16 @@
+Ironclad is a privacy-first, open-source Android content blocker designed specifically to prevent in-the-moment bypasses during impulsive urges.
+
+Most blockers fail because you know your own PIN, can disconnect the VPN, or uninstall the app in 5 seconds. Ironclad solves this with structural enforcement:
+
+1. DUAL PROTECTION TIERS:
+• Tier 1 (Quick Shield - Zero PC Required): Instant 60-second setup directly on your phone. Routes DNS queries through privacy-respecting adult filtering resolvers (Cloudflare Family 1.1.1.3 & CleanBrowsing Family) and activates an Accessibility Guardian that ejects you from Android Settings, App Info, and VPN toggles if tampering is detected.
+• Tier 2 (Iron Fortress - ADB Device Owner): Kernel-level enforcement provisioned once via USB. Prevents uninstallation (`setUninstallBlocked`), blocks Safe Mode boots (`DISALLOW_SAFE_BOOT`), and locks system-wide Private DNS (DNS-over-TLS).
+• RethinkDNS Companion Mode: If you use RethinkDNS as your firewall/VPN, Ironclad locks RethinkDNS as an always-on VPN with a kernel killswitch (`lockdownEnabled = true`). If RethinkDNS is turned off or killed, Android immediately cuts 100% of network traffic.
+
+2. 24-HOUR QUARANTINE & GAUNTLET PROTOCOL:
+• No master override keys or recovery passwords exist.
+• Tapping "Initiate Unlock" starts a compulsory 24-hour monotonic cooling-off countdown.
+• After 24 hours, a strictly timed 15-minute window opens requiring completion of a 120-character randomized typing challenge with zero-backspace tolerance. One typo resets your progress to 0.
+• Completing the challenge grants a 1-hour grace unlock. If the timer expires without completion, Ironclad locks down for another 24 hours.
+
+100% Free and Open Source Software (FLOSS). Zero tracking, zero telemetry, zero accounts, zero cloud dependencies.

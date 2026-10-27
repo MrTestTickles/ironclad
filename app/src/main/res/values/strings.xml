@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ironclad</string>
+    <string name="device_admin_description">Ironclad Device Owner enforcement agent preventing bypass of adult content blocking.</string>
+    <string name="accessibility_service_description">Ironclad Anti-Tamper Shield protecting your self-imposed network and blocker settings from impulsive disablement.</string>
+</resources>
