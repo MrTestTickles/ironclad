@@ -4,13 +4,12 @@ import android.content.Context
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.util.Locale
-import java.util.zip.GZIPInputStream
 
 /**
  * High-performance adult content and DNS-bypass filter.
  *
  * Two-tier matching:
- *  1. Fast in-memory HashSet loaded from bundled blocklist.txt.gz (~1.2 M domains)
+ *  1. Fast in-memory HashSet loaded from bundled blocklist.txt (~1.2 M domains)
  *  2. Hardcoded TLD, keyword, and DoH bypass fallbacks that fire even before
  *     the asset is loaded (or if loading fails).
  *
@@ -67,7 +66,7 @@ object AdultContentFilter {
     private var assetDomains: HashSet<String>? = null
 
     /**
-     * Load the gzipped blocklist asset into memory.
+     * Load the blocklist asset into memory.
      * Call once from a background thread (e.g. in IronVpnService.onCreate).
      * Safe to call multiple times; subsequent calls are no-ops.
      */
@@ -75,14 +74,12 @@ object AdultContentFilter {
         if (assetDomains != null) return
         try {
             val set = HashSet<String>(1_400_000)
-            context.assets.open("blocklist.txt.gz").use { raw ->
-                GZIPInputStream(raw).use { gz ->
-                    BufferedReader(InputStreamReader(gz)).use { reader ->
-                        reader.forEachLine { line ->
-                            val domain = line.trim()
-                            if (domain.isNotEmpty() && !domain.startsWith('#')) {
-                                set.add(domain)
-                            }
+            context.assets.open("blocklist.txt").use { raw ->
+                BufferedReader(InputStreamReader(raw)).use { reader ->
+                    reader.forEachLine { line ->
+                        val domain = line.trim()
+                        if (domain.isNotEmpty() && !domain.startsWith('#')) {
+                            set.add(domain)
                         }
                     }
                 }
