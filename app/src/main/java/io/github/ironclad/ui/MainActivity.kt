@@ -196,7 +196,7 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- 5. Tier 2 Enterprise ADB Provisioning ---
+        // --- 5. Security 2 Enterprise ADB Provisioning ---
         if (!isDeviceOwner) {
             AdbTerminalCard(
                 onCopyCommand = {
@@ -211,7 +211,7 @@ fun MainScreen(
 
         // --- 6. Footer Signature ---
         Text(
-            text = "IRONCLAD DEFENSE SYSTEMS // KERNEL-ANCHORED CONTENT PROTECTION",
+            text = "IRONCLAD DEFENSE SYSTEMS // KERNEL ANCHORED CONTENT PROTECTION",
             fontFamily = FontFamily.Monospace,
             fontSize = 9.sp,
             color = Color(0xFF4B5563),
@@ -274,7 +274,7 @@ fun HeaderSection(isDeviceOwner: Boolean, isVpnRunning: Boolean) {
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text(
-                text = if (isDeviceOwner) "TIER 2 // FORTRESS" else "TIER 1 // SHIELD",
+                text = if (isDeviceOwner) "SECURITY 2 // FORTRESS" else "SECURITY 1 // SHIELD",
                 fontFamily = FontFamily.Monospace,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
@@ -337,7 +337,7 @@ fun TelemetryGrid(isDeviceOwner: Boolean, isVpnRunning: Boolean, isAccessibility
             statusColor = Color(0xFF10B981)
         )
         TelemetryRow(
-            name = "ANTI-TAMPER",
+            name = "ANTI TAMPER",
             value = if (isDeviceOwner) "OS KERNEL LOCK" else if (isAccessibilityEnabled) "GUARDIAN ACTIVE" else "DISABLED",
             statusColor = if (isDeviceOwner || isAccessibilityEnabled) Color(0xFF10B981) else Color(0xFFF59E0B)
         )
@@ -419,7 +419,7 @@ fun SubsystemControlsCard(
 
         // Accessibility Row
         ControlTile(
-            title = "Anti-Tamper Guardian",
+            title = "Anti Tamper Guardian",
             detail = if (isAccessibilityEnabled) "Intercepts Settings and uninstalls" else "Required: Ejects tampering attempts to home",
             isActive = isAccessibilityEnabled,
             buttonText = if (isAccessibilityEnabled) "ACTIVE" else "ENABLE",
@@ -536,7 +536,7 @@ fun ProtocolConsoleCard(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "No instant bypass exists. Disabling protection requires initiating a mandatory 24-hour hardware countdown followed by a zero-error typing challenge.",
+                            text = "No instant bypass exists. Disabling protection requires initiating a mandatory 24 hour hardware countdown followed by a zero error typing challenge.",
                             fontSize = 11.sp,
                             color = Color(0xFF94A3B8),
                             lineHeight = 15.sp
@@ -557,7 +557,7 @@ fun ProtocolConsoleCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "INITIATE 24-HOUR UNLOCK COUNTDOWN",
+                        text = "INITIATE 24 HOUR UNLOCK COUNTDOWN",
                         fontFamily = FontFamily.Monospace,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -581,7 +581,7 @@ fun ProtocolConsoleCard(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "COOLING-OFF COUNTDOWN IN PROGRESS",
+                            text = "COOLING OFF COUNTDOWN IN PROGRESS",
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
                             fontSize = 10.sp,
@@ -642,7 +642,7 @@ fun ProtocolConsoleCard(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = "CLEARANCE ACTIVE // 1-HOUR WINDOW",
+                            text = "CLEARANCE ACTIVE // 1 HOUR WINDOW",
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
                             fontSize = 11.sp,
@@ -723,7 +723,7 @@ fun GauntletTerminal(
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Type the 120-character verification string below. Backspace is disabled; any single error instantly resets progress.",
+            text = "Type the 120 character verification string below. Backspace is disabled; any single error instantly resets progress.",
             fontSize = 10.sp,
             color = Color(0xFF9CA3AF),
             lineHeight = 14.sp
@@ -833,7 +833,7 @@ fun AdbTerminalCard(onCopyCommand: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "UPGRADE // TIER 2 PROVISIONING",
+                text = "SECURITY 2 // PROVISIONING",
                 fontFamily = FontFamily.Monospace,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
