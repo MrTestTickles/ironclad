@@ -12,8 +12,8 @@ android {
         applicationId = "io.github.ironclad"
         minSdk = 28 // Required for Android Private DNS (DoT)
         targetSdk = 35
-        versionCode = 2
-        versionName = "1.0.2"
+        versionCode = 3
+        versionName = "1.0.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -21,7 +21,8 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("debug")
+            // No local signingConfig — F-Droid buildserver signs with its own key.
+            // For sideloading, the CI workflow attaches the debug-signed debug APK.
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

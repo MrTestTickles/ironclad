@@ -1,0 +1,5 @@
+v1.0.2 release:
+- Security 1 / Security 2 terminology clarifications in UI
+- VirusTotal notice added to README
+- Updated CI actions to latest versions
+- F-Droid build compliance fixes (removed local aapt2 override, uncompressed blocklist)

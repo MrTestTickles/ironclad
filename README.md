@@ -22,8 +22,13 @@ Virus total likely will flag the app as a trojan this is because the app request
 
 ## Installation
 
-1. Download the prebuilt APK from release/ironclad.apk
-2. Install and launch the application on your device
+### Sideload (quickest)
+1. Download `ironclad.apk` from the [latest GitHub Release](https://github.com/MrTestTickles/ironclad/releases/latest)
+2. Enable *Install unknown apps* for your browser / file manager
+3. Install and launch the application on your device
+
+### F-Droid
+Add the repo or wait for the app to appear in the official F-Droid index once the build is accepted.
 
 ## Setup
 

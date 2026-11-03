@@ -1,0 +1,5 @@
+v1.0.3 release:
+- F-Droid build compliance: removed debug signingConfig from release build type
+- Updated CI workflow to JDK 17 (matches F-Droid buildserver)
+- Improved GitHub Release naming and artifact organisation
+- F-Droid metadata updated with v1.0.3 build entry
