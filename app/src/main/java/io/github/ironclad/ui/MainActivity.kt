@@ -126,6 +126,7 @@ fun MainScreen(
         mutableStateOf(AntiTamperAccessibilityService.isServiceRunning(context))
     }
     var isVpnRunning by remember { mutableStateOf(IronVpnService.isRunning) }
+    var showInfoDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -141,6 +142,16 @@ fun MainScreen(
     val scrollState = rememberScrollState()
     val clipboardManager = LocalClipboardManager.current
 
+    if (showInfoDialog) {
+        InfoDialog(
+            onDismissRequest = { showInfoDialog = false },
+            context = context,
+            isDeviceOwner = isDeviceOwner,
+            isVpnRunning = isVpnRunning,
+            isAccessibilityEnabled = isAccessibilityEnabled
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -149,20 +160,15 @@ fun MainScreen(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // --- 1. Top System Header ---
-        HeaderSection(isDeviceOwner = isDeviceOwner, isVpnRunning = isVpnRunning)
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // --- 2. Defense Telemetry Panel ---
-        TelemetryGrid(
+        HeaderSection(
             isDeviceOwner = isDeviceOwner,
             isVpnRunning = isVpnRunning,
-            isAccessibilityEnabled = isAccessibilityEnabled
+            onOpenInfo = { showInfoDialog = true }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- 3. Subsystem Controls (Mode 1 Quick Shield Setup) ---
+        // --- 2. Subsystem Controls (Mode 1 Quick Shield Setup) ---
         if (!isDeviceOwner) {
             SubsystemControlsCard(
                 isVpnRunning = isVpnRunning,
@@ -225,7 +231,11 @@ fun MainScreen(
 // -------------------------------------------------------------------------------------------------
 
 @Composable
-fun HeaderSection(isDeviceOwner: Boolean, isVpnRunning: Boolean) {
+fun HeaderSection(
+    isDeviceOwner: Boolean,
+    isVpnRunning: Boolean,
+    onOpenInfo: () -> Unit
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -235,32 +245,42 @@ fun HeaderSection(isDeviceOwner: Boolean, isVpnRunning: Boolean) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(
-                            if (isVpnRunning || isDeviceOwner) Color(0xFF10B981) else Color(0xFFF59E0B),
-                            RoundedCornerShape(1.dp)
-                        )
-                )
-                Spacer(modifier = Modifier.width(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .background(
+                        if (isVpnRunning || isDeviceOwner) Color(0xFF10B981) else Color(0xFFF59E0B),
+                        RoundedCornerShape(1.dp)
+                    )
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "IRONCLAD",
+                fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp,
+                color = Color(0xFFF9FAFB),
+                letterSpacing = 2.sp
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .border(1.dp, Color(0xFF262B34), RoundedCornerShape(4.dp))
+                    .background(Color(0xFF181C22))
+                    .clickable { onOpenInfo() }
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                contentAlignment = Alignment.Center
+            ) {
                 Text(
-                    text = "IRONCLAD",
+                    text = "ⓘ",
                     fontFamily = FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
-                    color = Color(0xFFF9FAFB),
-                    letterSpacing = 2.sp
+                    fontSize = 12.sp,
+                    color = Color(0xFF38BDF8)
                 )
             }
-            Text(
-                text = "SYSTEM ARCHITECTURE v1.0",
-                fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
-                color = Color(0xFF6B7280)
-            )
         }
 
         Box(
@@ -274,7 +294,7 @@ fun HeaderSection(isDeviceOwner: Boolean, isVpnRunning: Boolean) {
                 .padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Text(
-                text = if (isDeviceOwner) "SECURITY 2 // FORTRESS" else "SECURITY 1 // SHIELD",
+                text = if (isDeviceOwner) "SECURITY 2 // FORTRESS" else "SECURITY 1",
                 fontFamily = FontFamily.Monospace,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
@@ -286,71 +306,99 @@ fun HeaderSection(isDeviceOwner: Boolean, isVpnRunning: Boolean) {
 }
 
 @Composable
-fun TelemetryGrid(isDeviceOwner: Boolean, isVpnRunning: Boolean, isAccessibilityEnabled: Boolean) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, Color(0xFF1F242C), RoundedCornerShape(4.dp))
-            .background(Color(0xFF12151A))
-            .padding(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "DEFENSE SUBSYSTEMS",
-                fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF9CA3AF),
-                letterSpacing = 1.sp
-            )
-            Text(
-                text = "DIAGNOSTICS: NOMINAL",
-                fontFamily = FontFamily.Monospace,
-                fontSize = 10.sp,
-                color = Color(0xFF10B981)
-            )
+fun InfoDialog(
+    onDismissRequest: () -> Unit,
+    context: Context,
+    isDeviceOwner: Boolean,
+    isVpnRunning: Boolean,
+    isAccessibilityEnabled: Boolean
+) {
+    val packageInfo = remember {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0)
+        } catch (e: Exception) {
+            null
         }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        TelemetryRow(
-            name = "FILTER ENGINE",
-            value = "1.2M DOMAIN SINKHOLE",
-            statusColor = Color(0xFF10B981)
-        )
-        TelemetryRow(
-            name = "DNS PROXY",
-            value = if (isVpnRunning) "TUN ROUTED (IPv4+IPv6)" else "OFFLINE",
-            statusColor = if (isVpnRunning) Color(0xFF10B981) else Color(0xFFEF4444)
-        )
-        TelemetryRow(
-            name = "SAFESEARCH",
-            value = "STRICT VIP ENFORCED",
-            statusColor = Color(0xFF10B981)
-        )
-        TelemetryRow(
-            name = "DOH / DOT DROPS",
-            value = "PORT 853/443 ACTIVE",
-            statusColor = Color(0xFF10B981)
-        )
-        TelemetryRow(
-            name = "ANTI TAMPER",
-            value = if (isDeviceOwner) "OS KERNEL LOCK" else if (isAccessibilityEnabled) "GUARDIAN ACTIVE" else "DISABLED",
-            statusColor = if (isDeviceOwner || isAccessibilityEnabled) Color(0xFF10B981) else Color(0xFFF59E0B)
-        )
-        TelemetryRow(
-            name = "QUARANTINE CLOCK",
-            value = "MONOTONIC HARDWARE",
-            statusColor = Color(0xFF10B981)
-        )
     }
+    val versionName = packageInfo?.versionName ?: "1.0.2"
+    val versionCode = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+        packageInfo?.longVersionCode?.toString() ?: "2"
+    } else {
+        @Suppress("DEPRECATION")
+        packageInfo?.versionCode?.toString() ?: "2"
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        containerColor = Color(0xFF111418),
+        tonalElevation = 6.dp,
+        shape = RoundedCornerShape(6.dp),
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "ⓘ",
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    color = Color(0xFF38BDF8)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "SYSTEM INFO",
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = Color(0xFFF9FAFB),
+                    letterSpacing = 1.sp
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, Color(0xFF1E232B), RoundedCornerShape(4.dp))
+                    .background(Color(0xFF0F1216))
+                    .padding(12.dp)
+            ) {
+                InfoRow(name = "FILTER ENGINE", value = "ACTIVE")
+                InfoRow(name = "SAFESEARCH", value = "STRICT VIP ENFORCED")
+                InfoRow(name = "DOH / DOT DROPS", value = "PORT 853/443 ACTIVE")
+                InfoRow(name = "QUARANTINE CLOCK", value = "MONOTONIC HARDWARE")
+
+                Spacer(modifier = Modifier.height(6.dp))
+                HorizontalDivider(color = Color(0xFF1F242C), thickness = 1.dp)
+                Spacer(modifier = Modifier.height(6.dp))
+
+                InfoRow(name = "BUILD VERSION", value = versionName)
+                InfoRow(name = "BUILD NUMBER", value = versionCode)
+                InfoRow(name = "PACKAGE", value = context.packageName)
+                InfoRow(name = "TARGET SDK", value = "API 35 (Android 15)")
+                InfoRow(
+                    name = "SECURITY LEVEL",
+                    value = if (isDeviceOwner) "FORTRESS (DPM)" else "SHIELD (MODE 1)"
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = onDismissRequest,
+                colors = ButtonDefaults.textButtonColors(contentColor = Color(0xFF38BDF8))
+            ) {
+                Text(
+                    text = "CLOSE",
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 11.sp,
+                    letterSpacing = 1.sp
+                )
+            }
+        }
+    )
 }
 
 @Composable
-fun TelemetryRow(name: String, value: String, statusColor: Color) {
+fun InfoRow(name: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -361,23 +409,16 @@ fun TelemetryRow(name: String, value: String, statusColor: Color) {
         Text(
             text = name,
             fontFamily = FontFamily.Monospace,
-            fontSize = 11.sp,
+            fontSize = 10.sp,
             color = Color(0xFF6B7280)
         )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(5.dp)
-                    .background(statusColor, RoundedCornerShape(1.dp))
-            )
-            Spacer(modifier = Modifier.width(6.dp))
-            Text(
-                text = value,
-                fontFamily = FontFamily.Monospace,
-                fontSize = 11.sp,
-                color = Color(0xFFD1D5DB)
-            )
-        }
+        Text(
+            text = value,
+            fontFamily = FontFamily.Monospace,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color(0xFFD1D5DB)
+        )
     }
 }
 
@@ -526,7 +567,7 @@ fun ProtocolConsoleCard(
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
-                                text = "STATUS: STRICT LOCKDOWN",
+                                text = "24-HOUR ACCESS APPEAL",
                                 fontFamily = FontFamily.Monospace,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
@@ -536,7 +577,7 @@ fun ProtocolConsoleCard(
                         }
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "No instant bypass exists. Disabling protection requires initiating a mandatory 24 hour hardware countdown followed by a zero error typing challenge.",
+                            text = "Disabling protection requires initiating a mandatory 24 hour hardware countdown followed by a zero error typing challenge.",
                             fontSize = 11.sp,
                             color = Color(0xFF94A3B8),
                             lineHeight = 15.sp
@@ -833,7 +874,7 @@ fun AdbTerminalCard(onCopyCommand: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "SECURITY 2 // PROVISIONING",
+                text = "OPTIONAL SECURITY",
                 fontFamily = FontFamily.Monospace,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
@@ -876,5 +917,15 @@ fun AdbTerminalCard(onCopyCommand: () -> Unit) {
                 lineHeight = 15.sp
             )
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        Text(
+            text = "Grant device owner privilege for prevent uninstallation. Recommend only if struggle to not turn off.",
+            fontFamily = FontFamily.Monospace,
+            fontSize = 10.sp,
+            color = Color(0xFF9CA3AF),
+            lineHeight = 14.sp
+        )
     }
 }
