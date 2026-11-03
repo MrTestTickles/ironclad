@@ -207,6 +207,11 @@ fun MainScreen(
             AdbTerminalCard(
                 onCopyCommand = {
                     val cmd = "adb shell dpm set-device-owner io.github.ironclad/.admin.IronDeviceAdminReceiver"
+                    try {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
+                        val clip = android.content.ClipData.newPlainText("Ironclad ADB Command", cmd)
+                        clipboard?.setPrimaryClip(clip)
+                    } catch (_: Exception) {}
                     clipboardManager.setText(AnnotatedString(cmd))
                     Toast.makeText(context, "ADB command copied to clipboard", Toast.LENGTH_SHORT).show()
                 }
@@ -361,15 +366,6 @@ fun InfoDialog(
                     .background(Color(0xFF0F1216))
                     .padding(12.dp)
             ) {
-                InfoRow(name = "FILTER ENGINE", value = "ACTIVE")
-                InfoRow(name = "SAFESEARCH", value = "STRICT VIP ENFORCED")
-                InfoRow(name = "DOH / DOT DROPS", value = "PORT 853/443 ACTIVE")
-                InfoRow(name = "QUARANTINE CLOCK", value = "MONOTONIC HARDWARE")
-
-                Spacer(modifier = Modifier.height(6.dp))
-                HorizontalDivider(color = Color(0xFF1F242C), thickness = 1.dp)
-                Spacer(modifier = Modifier.height(6.dp))
-
                 InfoRow(name = "BUILD VERSION", value = versionName)
                 InfoRow(name = "BUILD NUMBER", value = versionCode)
                 InfoRow(name = "PACKAGE", value = context.packageName)
@@ -861,6 +857,20 @@ fun GauntletTerminal(
 
 @Composable
 fun AdbTerminalCard(onCopyCommand: () -> Unit) {
+    var isCopied by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isCopied) {
+        if (isCopied) {
+            delay(3500L)
+            isCopied = false
+        }
+    }
+
+    val copyAction = {
+        onCopyCommand()
+        isCopied = true
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -881,12 +891,21 @@ fun AdbTerminalCard(onCopyCommand: () -> Unit) {
                 color = Color(0xFF38BDF8),
                 letterSpacing = 1.sp
             )
-            Text(
-                text = "TAP TO COPY",
-                fontFamily = FontFamily.Monospace,
-                fontSize = 9.sp,
-                color = Color(0xFF6B7280)
-            )
+            Surface(
+                shape = RoundedCornerShape(3.dp),
+                color = if (isCopied) Color(0xFF064E3B) else Color(0xFF181C22),
+                border = BorderStroke(1.dp, if (isCopied) Color(0xFF10B981) else Color(0xFF262B34)),
+                modifier = Modifier.clickable { copyAction() }
+            ) {
+                Text(
+                    text = if (isCopied) "✓ COPIED" else "TAP TO COPY",
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isCopied) Color(0xFF34D399) else Color(0xFF38BDF8),
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(8.dp))
@@ -903,16 +922,20 @@ fun AdbTerminalCard(onCopyCommand: () -> Unit) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(1.dp, Color(0xFF1E293B), RoundedCornerShape(3.dp))
-                .background(Color(0xFF030712))
-                .clickable { onCopyCommand() }
+                .border(
+                    1.dp,
+                    if (isCopied) Color(0xFF10B981) else Color(0xFF1E293B),
+                    RoundedCornerShape(3.dp)
+                )
+                .background(if (isCopied) Color(0xFF06281E) else Color(0xFF030712))
+                .clickable { copyAction() }
                 .padding(10.dp)
         ) {
             Text(
                 text = "$ adb shell dpm set-device-owner io.github.ironclad/.admin.IronDeviceAdminReceiver",
                 fontFamily = FontFamily.Monospace,
                 fontSize = 10.sp,
-                color = Color(0xFF38BDF8),
+                color = if (isCopied) Color(0xFF34D399) else Color(0xFF38BDF8),
                 letterSpacing = 0.5.sp,
                 lineHeight = 15.sp
             )
@@ -921,7 +944,7 @@ fun AdbTerminalCard(onCopyCommand: () -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Grant device owner privilege for prevent uninstallation. Recommend only if struggle to not turn off.",
+            text = "Grants device owner privileges to prevent uninstallation. Recommended only if you struggle to keep protection enabled.",
             fontFamily = FontFamily.Monospace,
             fontSize = 10.sp,
             color = Color(0xFF9CA3AF),
